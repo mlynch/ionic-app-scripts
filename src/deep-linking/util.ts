@@ -1,5 +1,9 @@
 import { dirname, join } from 'path';
-import { DeepLinkConfigEntry, HydratedDeepLinkConfigEntry } from '../util/interfaces';
+
+import { SourceFile } from 'typescript';
+
+import { DeepLinkConfigEntry, File, HydratedDeepLinkConfigEntry } from '../util/interfaces';
+import { getTypescriptSourceFile } from '../util/typescript-utils';
 
 const LOAD_CHILDREN_SPLIT_TOKEN = '#';
 
@@ -118,3 +122,16 @@ interface ParsedDeepLink {
   name: string;
   loadChildren: string;
 };
+
+
+
+export function test(typescriptFiles: File[]) {
+  const sourceFiles = typescriptFiles.map(file => getTypescriptSourceFile(file.path, file.content));
+  sourceFiles.forEach(sourceFile => {
+    parseDeepLinkDecorator(sourceFile);
+  });
+}
+
+export function parseDeepLinkDecorator(sourceFile: SourceFile) {
+  console.log('sourceFile.decorators: ', sourceFile.decorators);
+}

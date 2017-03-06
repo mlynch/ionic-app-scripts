@@ -15,7 +15,7 @@ import {
 
 import { rangeReplace, stringSplice } from './helpers';
 
-export function getTypescriptSourceFile(filePath: string, fileContent: string, languageVersion: ScriptTarget, setParentNodes: boolean): SourceFile {
+export function getTypescriptSourceFile(filePath: string, fileContent: string, languageVersion: ScriptTarget = ScriptTarget.Latest, setParentNodes: boolean = false): SourceFile {
   return createSourceFile(filePath, fileContent, languageVersion, setParentNodes);
 }
 

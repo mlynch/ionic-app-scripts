@@ -1,3 +1,5 @@
+import { extname } from 'path';
+
 import { Logger } from './logger/logger';
 import * as Constants from './util/constants';
 import { BuildError } from './util/errors';
@@ -23,10 +25,15 @@ export function deepLinking(context: BuildContext) {
 
 
 function deepLinkingWorker(context: BuildContext) {
-  const appModulePath = process.env[Constants.ENV_APP_NG_MODULE_PATH];
+  /*const appModulePath = process.env[Constants.ENV_APP_NG_MODULE_PATH];
   return getAppNgModuleContent(appModulePath, context.fileCache).then((fileContent: string) => {
     return extractDeepLinkData(appModulePath, fileContent, context.runAot);
   });
+  */
+
+  const typescriptFiles = context.fileCache.getAll().filter(file => extname(file.path) === '.ts').filter(file => file.path.indexOf('ngfactory') === -1);
+
+  return Promise.resolve([]);
 }
 
 function getAppNgModuleContent(filePath: string, fileCache: FileCache): Promise<string> {
