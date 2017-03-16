@@ -2,7 +2,7 @@ import { basename, dirname, join, relative } from 'path';
 import { readdirSync } from 'fs';
 import { Logger} from '../logger/logger';
 
-import { paramCase, pascalCase } from 'change-case';
+import { paramCase, pascalCase, upperCaseFirst } from 'change-case';
 
 import * as Constants from '../util/constants';
 import * as GeneratorConstants from './constants';
@@ -14,8 +14,9 @@ import { appendNgModuleDeclaration, insertNamedImportIfNeeded } from '../util/ty
 
 export function hydrateRequest(context: BuildContext, request: GeneratorRequest) {
   const hydrated = Object.assign({ includeNgModule: true }, request) as HydratedGeneratorRequest;
-  hydrated.className = ensureSuffix(pascalCase(request.name), getSuffixFromGeneratorType(context, request.type));
-  hydrated.fileName = removeSuffix(paramCase(request.name), `-${request.type}`);
+  const suffix = getSuffixFromGeneratorType(context, request.type);
+  hydrated.className = ensureSuffix(pascalCase(request.name), upperCaseFirst(suffix));
+  hydrated.fileName = removeSuffix(paramCase(request.name), `-${paramCase(suffix)}`);
 
   hydrated.dirToRead = join(getPropertyValue(Constants.ENV_VAR_IONIC_ANGULAR_TEMPLATE_DIR), request.type);
 
