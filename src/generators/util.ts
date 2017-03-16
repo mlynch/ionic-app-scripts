@@ -2,7 +2,7 @@ import { basename, dirname, join, relative } from 'path';
 import { readdirSync } from 'fs';
 import { Logger} from '../logger/logger';
 
-import { paramCase, pascalCase, upperCaseFirst } from 'change-case';
+import { paramCase, pascalCase } from 'change-case';
 
 import * as Constants from '../util/constants';
 import * as GeneratorConstants from './constants';
@@ -14,7 +14,7 @@ import { appendNgModuleDeclaration, insertNamedImportIfNeeded } from '../util/ty
 
 export function hydrateRequest(context: BuildContext, request: GeneratorRequest) {
   const hydrated = Object.assign({ includeNgModule: true }, request) as HydratedGeneratorRequest;
-  hydrated.className = ensureSuffix(pascalCase(request.name), upperCaseFirst(request.type));
+  hydrated.className = ensureSuffix(pascalCase(request.name), getSuffixFromGeneratorType(context, request.type));
   hydrated.fileName = removeSuffix(paramCase(request.name), `-${request.type}`);
 
   hydrated.dirToRead = join(getPropertyValue(Constants.ENV_VAR_IONIC_ANGULAR_TEMPLATE_DIR), request.type);
@@ -94,12 +94,27 @@ export function getNgModules(context: BuildContext, types: string[]): Promise<Gl
   return globAll(patterns);
 }
 
+function getSuffixFromGeneratorType(context: BuildContext, type: string) {
+  if (type === Constants.COMPONENT) {
+    return 'Component';
+  } else if (type === Constants.DIRECTIVE) {
+    return 'Directive';
+  } else if (type === Constants.PAGE || type === Constants.TABS) {
+    return 'Page';
+  } else if (type === Constants.PIPE) {
+    return 'Pipe';
+  } else if (type === Constants.PROVIDER) {
+    return 'Provider';
+  }
+  throw new Error(`Unknown Generator Type: ${type}`);
+}
+
 export function getDirToWriteToByType(context: BuildContext, type: string) {
   if (type === Constants.COMPONENT) {
     return context.componentsDir;
   } else if (type === Constants.DIRECTIVE) {
     return context.directivesDir;
-  } else if (type === Constants.PAGE) {
+  } else if (type === Constants.PAGE || type === Constants.TABS) {
     return context.pagesDir;
   } else if (type === Constants.PIPE) {
     return context.pipesDir;
@@ -110,29 +125,29 @@ export function getDirToWriteToByType(context: BuildContext, type: string) {
 }
 
 export function nonPageFileManipulation(context: BuildContext, name: string, ngModulePath: string, type: string) {
-  const hydratedRequest = hydrateRequest(context, { type: type, name });
-  return readFileAsync(ngModulePath).then((fileContent: string) => {
+  const hydratedRequest = hydrateRequest(context, { type, name });
+  let fileContent: string;
+  return readFileAsync(ngModulePath).then((content) => {
+    fileContent = content;
+    return generateTemplates(context, hydratedRequest);
+  }).then(() => {
     fileContent = insertNamedImportIfNeeded(ngModulePath, fileContent, hydratedRequest.className, relative(dirname(ngModulePath), hydratedRequest.dirToWrite));
     fileContent = appendNgModuleDeclaration(ngModulePath, fileContent, hydratedRequest.className);
     return writeFileAsync(ngModulePath, fileContent);
-  }).then(() => {
-    return processNonTabRequest(context, hydratedRequest);
-  }).then(() => {
-    // TODO
   });
 }
 
-export function processNonTabRequest(context: BuildContext, request: GeneratorRequest): Promise<string[]> {
-  Logger.debug('[Generators] processNonTabRequest: Hydrating the request with project data ...');
+export function generateTemplates(context: BuildContext, request: GeneratorRequest): Promise<string[]> {
+  Logger.debug('[Generators] generateTemplates: Hydrating the request with project data ...');
   const hydratedRequest = hydrateRequest(context, request);
-  Logger.debug('[Generators] processNonTabRequest: Reading templates ...');
+  Logger.debug('[Generators] generateTemplates: Reading templates ...');
   return readTemplates(hydratedRequest.dirToRead).then((map: Map<string, string>) => {
-    Logger.debug('[Generators] processNonTabRequest: Filtering out NgModule and Specs if needed ...');
+    Logger.debug('[Generators] generateTemplates: Filtering out NgModule and Specs if needed ...');
     return filterOutTemplates(hydratedRequest, map);
   }).then((filteredMap: Map<string, string>) => {
-    Logger.debug('[Generators] processNonTabRequest: Applying tempaltes ...');
+    Logger.debug('[Generators] generateTemplates: Applying templates ...');
     const appliedTemplateMap = applyTemplates(hydratedRequest, filteredMap);
-    Logger.debug('[Generators] processNonTabRequest: Writing generated files to disk ...');
+    Logger.debug('[Generators] generateTemplates: Writing generated files to disk ...');
     return writeGeneratedFiles(hydratedRequest, appliedTemplateMap);
   });
 }

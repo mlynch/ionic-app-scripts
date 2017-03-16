@@ -1,17 +1,12 @@
 import { generateContext } from './util/config';
 import * as Constants from './util/constants';
 import { BuildContext } from './util/interfaces';
-import { getNgModules, GeneratorOption, GeneratorRequest, nonPageFileManipulation, processNonTabRequest } from './generators/util';
+import { hydrateRequest, getNgModules, GeneratorOption, GeneratorRequest, nonPageFileManipulation, generateTemplates } from './generators/util';
 
 export { getNgModules, GeneratorOption, GeneratorRequest };
 
-export function generateNonTab(request: GeneratorRequest) {
-  const context = generateContext();
-  return processNonTabRequest(context, request);
-}
-
 export function processPageRequest(context: BuildContext, name: string) {
-  return processNonTabRequest(context, { type: 'page', name });
+  return generateTemplates(context, { type: 'page', name });
 }
 
 export function processPipeRequest(context: BuildContext, name: string, ngModulePath: string) {
@@ -28,6 +23,20 @@ export function processComponentRequest(context: BuildContext, name: string, ngM
 
 export function processProviderRequest(context: BuildContext, name: string, ngModulePath: string) {
   return nonPageFileManipulation(context, name, ngModulePath, 'provider');
+}
+
+export function processTabsRequest(context: BuildContext, name: string, tabs: string[]) {
+  const hydratedRequest = hydrateRequest(context, { type: 'tabs', name });
+
+  return generateTemplates(context, hydratedRequest).then(() => {
+    const promises = tabs.map((tab) => {
+      return generateTemplates(context, { type: 'page', name: tab });
+    });
+
+    return Promise.all(promises);
+  }).then(() => {
+    // TODO: NgModule changes
+  });
 }
 
 export function listOptions() {
