@@ -15,6 +15,7 @@ export * from './util/config';
 export * from './util/helpers';
 export * from './util/interfaces';
 export * from './generators';
+var karma = require('./karma');
 
 import { generateContext } from './util/config';
 import { getAppScriptsVersion } from './util/helpers';
